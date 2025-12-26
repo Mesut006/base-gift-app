@@ -68,20 +68,33 @@
         }
 
         async function createGift() {
-            try {
-                const amount = document.getElementById('amount').value;
-                const password = document.getElementById('createPassword').value;
-                const hash = ethers.keccak256(ethers.toUtf8Bytes(password));
-                
-                document.getElementById('status').innerText = "İşlem onaylanıyor...";
-                const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amount) });
-                await tx.wait();
-                document.getElementById('status').innerText = "Hediye başarıyla oluşturuldu! Arkadaşınıza ID ve şifreyi gönderin.";
-            } catch (err) {
-                console.error(err);
-                document.getElementById('status').innerText = "Hata oluştu. Detaylar konsolda.";
-            }
-        }
+    try {
+        const amount = document.getElementById('amount').value;
+        const password = document.getElementById('createPassword').value;
+        
+        if(!amount || !password) return alert("Lütfen miktar ve şifre girin!");
+
+        const hash = ethers.keccak256(ethers.toUtf8Bytes(password));
+        
+        document.getElementById('status').innerText = "Cüzdan onayı bekleniyor...";
+        
+        // KRİTİK DÜZELTME: Fonksiyonu açıkça çağırıyoruz
+        const tx = await contract.hediyeOlustur(hash, { 
+            value: ethers.parseEther(amount),
+            gasLimit: 100000 // Gas limitini manuel belirleyerek hatayı önlüyoruz
+        });
+
+        document.getElementById('status').innerText = "İşlem ağa gönderildi, onay bekleniyor...";
+        await tx.wait();
+        
+        // Güncel hediye sayısını alarak ID'yi öğreniyoruz
+        const currentId = await contract.hediyeSayaci();
+        document.getElementById('status').innerText = `Başarılı! Hediye ID: ${Number(currentId) - 1}. Bu ID'yi not edin!`;
+    } catch (err) {
+        console.error(err);
+        document.getElementById('status').innerText = "Hata: İşlem iptal edildi veya yetersiz bakiye.";
+    }
+}
 
         async function claimGift() {
             try {
