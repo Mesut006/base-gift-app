@@ -3,98 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Base Gift V2</title>
+    <title>BaseGift | On-Chain Hediye</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at top right, #1e40af, #000); min-height: 100vh; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn-primary { background: linear-gradient(45deg, #3b82f6, #2563eb); transition: all 0.3s ease; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3); }
+    </style>
 </head>
-<body class="bg-blue-600 text-white p-8 font-sans">
-    <div class="max-w-md mx-auto bg-white/10 p-6 rounded-2xl backdrop-blur-md border border-white/20">
-        <h1 class="text-3xl font-bold text-center mb-8">🎁 Base Hediye V2</h1>
-        
-        <button id="connectBtn" class="w-full bg-white text-blue-600 py-3 rounded-xl font-bold mb-6">Cüzdanı Bağla</button>
+<body class="text-gray-100 p-4 md:p-12">
+    <div class="max-w-2xl mx-auto">
+        <div class="flex justify-between items-center mb-12">
+            <h1 class="text-3xl font-800 tracking-tighter italic">BASE<span class="text-blue-500">GIFT</span></h1>
+            <button id="connectBtn" class="glass px-6 py-2 rounded-full text-sm font-semibold hover:bg-white/10 transition">Cüzdanı Bağla</button>
+        </div>
 
-        <div class="space-y-4">
-            <div class="bg-black/20 p-4 rounded-xl">
-                <h2 class="font-bold mb-2">Hediye Oluştur</h2>
-                <input id="amount" type="number" placeholder="ETH Miktarı" class="w-full p-2 bg-transparent border-b outline-none mb-2">
-                <input id="createPass" type="password" placeholder="Şifre Belirle" class="w-full p-2 bg-transparent border-b outline-none mb-4">
-                <button onclick="createGift()" class="w-full bg-green-500 py-2 rounded-lg font-bold">Paketle ve Gönder</button>
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="glass p-8 rounded-3xl">
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold mb-1">Hediye Gönder 🎁</h2>
+                    <p class="text-gray-400 text-sm">Şifreli bir paket oluştur.</p>
+                </div>
+                <div class="space-y-4">
+                    <input id="amount" type="number" placeholder="Miktar (ETH)" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500">
+                    <input id="createPass" type="password" placeholder="Gizli Şifre" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500">
+                    <button onclick="createGift()" class="w-full btn-primary py-4 rounded-xl font-bold">Paketi Mühürle</button>
+                </div>
             </div>
 
-            <div class="bg-black/20 p-4 rounded-xl">
-                <h2 class="font-bold mb-2">Hediye Al</h2>
-                <input id="giftId" type="number" placeholder="Hediye ID" class="w-full p-2 bg-transparent border-b outline-none mb-2">
-                <input id="claimPass" type="password" placeholder="Şifreyi Gir" class="w-full p-2 bg-transparent border-b outline-none mb-4">
-                <button onclick="claimGift()" class="w-full bg-white/20 py-2 rounded-lg font-bold">Cüzdana Çek</button>
+            <div class="glass p-8 rounded-3xl">
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold mb-1">Hediye Al 🔑</h2>
+                    <p class="text-gray-400 text-sm">Sana gelen şifreyi çöz.</p>
+                </div>
+                <div class="space-y-4">
+                    <input id="giftId" type="number" placeholder="Hediye ID" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500">
+                    <input id="claimPass" type="password" placeholder="Şifreyi Gir" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500">
+                    <button onclick="claimGift()" class="w-full bg-white/10 border border-white/20 py-4 rounded-xl font-bold hover:bg-white/20">Parayı Çek</button>
+                </div>
             </div>
         </div>
-        <p id="status" class="mt-4 text-center text-sm font-mono bg-black/30 p-2 rounded hidden"></p>
+
+        <div id="statusBox" class="mt-8 glass p-6 rounded-2xl hidden text-center animate-pulse">
+            <p id="status" class="text-blue-300 font-mono text-sm"></p>
+            <div id="shareArea" class="mt-4 hidden border-t border-white/10 pt-4">
+                <p class="text-xs text-gray-500 mb-2 uppercase tracking-widest">Hediye Linkin:</p>
+                <div class="flex gap-2">
+                    <input id="shareUrl" readonly class="w-full bg-black/30 p-2 rounded text-xs outline-none">
+                    <button onclick="copyLink()" class="bg-blue-600 px-4 rounded text-xs font-bold">Kopyala</button>
+                </div>
+            </div>
+        </div>
     </div>
 
- <script>
-        // 1. BURAYA SADECE YENİ KONTRAT ADRESİNİ YAZ
-        const contractAddress = "0x2ff7991F6a895813D687a31e54D79c329CC4B8F7"; 
-        
-        // 2. TEMİZLENMİŞ GÜNCEL ABI
+    <script>
+        const contractAddress = "0x2ff7991f6a895813d687a31e54d79c329cc488f7";
         const abi = [
             {"inputs":[{"internalType":"bytes32","name":"_sifreHash","type":"bytes32"}],"name":"hediyeOlustur","outputs":[],"stateMutability":"payable","type":"function"},
             {"inputs":[{"internalType":"uint256","name":"_id","type":"uint256"},{"internalType":"string","name":"_sifre","type":"string"}],"name":"hediyeAl","outputs":[],"stateMutability":"nonpayable","type":"function"},
             {"inputs":[],"name":"hediyeSayaci","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
         ];
 
-        let signer;
-        let contract;
+        let signer, contract;
 
-        // Cüzdan Bağlama Fonksiyonu
-        async function connectWallet() {
-            try {
-                if (!window.ethereum) return alert("MetaMask yüklü değil!");
-                const provider = new ethers.BrowserProvider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                signer = await provider.getSigner();
-                contract = new ethers.Contract(contractAddress, abi, signer);
-                document.getElementById('connectBtn').innerText = "Bağlandı ✅";
-                showStatus("Cüzdan başarıyla bağlandı.");
-            } catch (err) {
-                showStatus("Bağlantı Hatası: " + err.message);
-            }
+        // URL'den ID çekme (Otomatik doldurma için)
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.get('id')) document.getElementById('giftId').value = urlParams.get('id');
         }
 
-        document.getElementById('connectBtn').onclick = connectWallet;
+        document.getElementById('connectBtn').onclick = async () => {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+            contract = new ethers.Contract(contractAddress, abi, signer);
+            document.getElementById('connectBtn').innerText = "Cüzdan Hazır";
+        };
 
         async function createGift() {
             try {
                 const amt = document.getElementById('amount').value;
                 const pass = document.getElementById('createPass').value;
-                if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
-                
                 const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
+                
                 showStatus("MetaMask onayı bekleniyor...");
                 const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amt) });
+                
+                showStatus("İşlem ağda onaylanıyor (Base)...");
                 await tx.wait();
                 
                 const count = await contract.hediyeSayaci();
-                showStatus(`Başarılı! ID: ${Number(count) - 1}`);
-            } catch (e) { showStatus("Hata: " + (e.reason || e.message)); }
+                const id = Number(count) - 1;
+                
+                showStatus(`✅ Hediye oluşturuldu! ID: ${id}`);
+                showShareLink(id);
+            } catch (e) { showStatus("Hata: " + (e.reason || "İşlem iptal edildi.")); }
         }
 
         async function claimGift() {
             try {
                 const id = document.getElementById('giftId').value;
                 const pass = document.getElementById('claimPass').value;
-                if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
-
-                showStatus("İşlem gönderiliyor...");
-                const tx = await contract.hediyeAl(BigInt(id), pass.trim());
+                showStatus("Şifre kontrol ediliyor...");
+                const tx = await contract.hediyeAl(BigInt(id), pass);
                 await tx.wait();
-                showStatus("✅ Para cüzdanınıza aktarıldı!");
-            } catch (e) { showStatus("Hata: " + (e.reason || "Şifre/ID yanlış veya gas yetersiz.")); }
+                showStatus("🎉 Başarılı! ETH cüzdanınıza aktarıldı.");
+            } catch (e) { showStatus("Hata: Şifre yanlış veya hediye alınmış."); }
         }
 
         function showStatus(msg) {
-            const s = document.getElementById('status');
-            s.innerText = msg;
-            s.classList.remove('hidden');
+            const box = document.getElementById('statusBox');
+            box.classList.remove('hidden');
+            document.getElementById('status').innerText = msg;
+        }
+
+        function showShareLink(id) {
+            const area = document.getElementById('shareArea');
+            area.classList.remove('hidden');
+            const url = window.location.origin + window.location.pathname + "?id=" + id;
+            document.getElementById('shareUrl').value = url;
+        }
+
+        function copyLink() {
+            const copyText = document.getElementById('shareUrl');
+            copyText.select();
+            document.execCommand("copy");
+            alert("Link kopyalandı! Arkadaşına gönderebilirsin.");
         }
     </script>
 </body>
