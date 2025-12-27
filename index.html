@@ -99,9 +99,12 @@
                 
                 showStatus(`✅ Hediye oluşturuldu! ID: ${id}`);
                 showShareLink(id);
-            } catch (e) { showStatus("Hata: " + (e.reason || "İşlem iptal edildi.")); }
+               } catch (e) { 
+                console.error("Hata Detayı:", e);
+                // Hata mesajını daha detaylı gösterelim
+            const detailedError = e.message || e.reason || "Bilinmeyen Hata";
+            showStatus("Hata: " + detailedError); 
         }
-
         async function claimGift() {
             try {
                 const id = document.getElementById('giftId').value;
