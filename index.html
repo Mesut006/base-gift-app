@@ -32,164 +32,65 @@
     </div>
 
  <script>
-        // 0x2ff7991F6a895813D687a31e54D79c329CC4B8F7
+        // 1. BURAYA SADECE YENİ KONTRAT ADRESİNİ YAZ
         const contractAddress = "0x2ff7991F6a895813D687a31e54D79c329CC4B8F7"; 
         
-      // ABI kısmını tamamen bununla değiştirin
-    const abi = [[
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_id",
-				"type": "uint256"
-			},
-			{
-				"internalType": "string",
-				"name": "_sifre",
-				"type": "string"
-			}
-		],
-		"name": "hediyeAl",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "_sifreHash",
-				"type": "bytes32"
-			}
-		],
-		"name": "hediyeOlustur",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "hediyeler",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "gonderen",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "miktar",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bytes32",
-				"name": "sifreHash",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "bool",
-				"name": "alindiMi",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "hediyeSayaci",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	}
-]
+        // 2. TEMİZLENMİŞ GÜNCEL ABI
+        const abi = [
+            {"inputs":[{"internalType":"bytes32","name":"_sifreHash","type":"bytes32"}],"name":"hediyeOlustur","outputs":[],"stateMutability":"payable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"_id","type":"uint256"},{"internalType":"string","name":"_sifre","type":"string"}],"name":"hediyeAl","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[],"name":"hediyeSayaci","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+        ];
+
         let signer;
         let contract;
 
-        // Cüzdan bağlama butonu
-        document.getElementById('connectBtn').onclick = async () => {
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    const provider = new ethers.BrowserProvider(window.ethereum);
-                    await provider.send("eth_requestAccounts", []);
-                    signer = await provider.getSigner();
-                    contract = new ethers.Contract(contractAddress, abi, signer);
-                    document.getElementById('connectBtn').innerText = "Bağlandı ✅";
-                    showStatus("Cüzdan bağlandı, işlem yapabilirsiniz.");
-                } catch (err) {
-                    showStatus("Bağlantı hatası: " + err.message);
-                }
-            } else {
-                alert("Lütfen MetaMask yükleyin!");
+        // Cüzdan Bağlama Fonksiyonu
+        async function connectWallet() {
+            try {
+                if (!window.ethereum) return alert("MetaMask yüklü değil!");
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(contractAddress, abi, signer);
+                document.getElementById('connectBtn').innerText = "Bağlandı ✅";
+                showStatus("Cüzdan başarıyla bağlandı.");
+            } catch (err) {
+                showStatus("Bağlantı Hatası: " + err.message);
             }
-        };
+        }
 
-       async function claimGift() {
-    try {
-        const idInput = document.getElementById('giftId').value;
-        const passInput = document.getElementById('claimPass').value;
-        
-        if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
+        document.getElementById('connectBtn').onclick = connectWallet;
 
-        // ID'yi sayıya, şifreyi temiz metne çeviriyoruz
-        const cleanId = parseInt(idInput);
-        const cleanPass = passInput.trim();
-
-        showStatus("İşlem onayınız bekleniyor...");
-
-        // Kontrat fonksiyonunu doğrudan çağırıyoruz
-        const tx = await contract.hediyeAl(cleanId, cleanPass);
-
-        showStatus("Blok onayı bekleniyor...");
-        await tx.wait();
-        
-        showStatus("✅ Tebrikler! Hediye cüzdanınıza aktarıldı.");
-    } catch (e) {
-        console.error("Detaylı Hata:", e);
-        // Hatanın içindeki asıl mesajı kullanıcıya göster
-        const errorReason = e.reason || "Şifre yanlış veya hediye zaten alınmış.";
-        showStatus("Hata: " + errorReason);
-    }
-}
+        async function createGift() {
+            try {
+                const amt = document.getElementById('amount').value;
+                const pass = document.getElementById('createPass').value;
+                if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
+                
+                const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
+                showStatus("MetaMask onayı bekleniyor...");
+                const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amt) });
+                await tx.wait();
+                
+                const count = await contract.hediyeSayaci();
+                showStatus(`Başarılı! ID: ${Number(count) - 1}`);
+            } catch (e) { showStatus("Hata: " + (e.reason || e.message)); }
+        }
 
         async function claimGift() {
-    try {
-        const id = document.getElementById('giftId').value;
-        const pass = document.getElementById('claimPass').value;
-        
-        if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
-        if (id === "" || !pass) return showStatus("Hata: ID ve Şifre girmelisiniz!");
+            try {
+                const id = document.getElementById('giftId').value;
+                const pass = document.getElementById('claimPass').value;
+                if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
 
-        showStatus("Kontratla iletişim kuruluyor...");
+                showStatus("İşlem gönderiliyor...");
+                const tx = await contract.hediyeAl(BigInt(id), pass.trim());
+                await tx.wait();
+                showStatus("✅ Para cüzdanınıza aktarıldı!");
+            } catch (e) { showStatus("Hata: " + (e.reason || "Şifre/ID yanlış veya gas yetersiz.")); }
+        }
 
-        // KRİTİK DÜZELTME: İşlemi daha detaylı hata yakalayacak şekilde çağırıyoruz
-        const tx = await contract.hediyeAl(BigInt(id), pass.trim()); 
-        
-        showStatus("Onay bekleniyor... Lütfen MetaMask'ı kontrol edin.");
-        await tx.wait();
-        
-        showStatus("✅ BAŞARILI! Para cüzdanınıza aktarıldı.");
-    } catch (e) { 
-        console.error("Claim Hatası:", e);
-        // Hatanın sebebini kullanıcıya net göster
-        let mesaj = "Şifre yanlış veya hediye zaten alınmış olabilir.";
-        if (e.reason) mesaj = "Hata Nedeni: " + e.reason;
-        showStatus("Hata: " + mesaj); 
-    }
-}
         function showStatus(msg) {
             const s = document.getElementById('status');
             s.innerText = msg;
