@@ -62,33 +62,33 @@
             }
         };
 
-        async function createGift() {
-            try {
-                const amt = document.getElementById('amount').value;
-                const pass = document.getElementById('createPass').value;
-                
-                if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
-                if (!amt || amt <= 0) return showStatus("Hata: Geçerli bir miktar girin!");
+       async function claimGift() {
+    try {
+        const idInput = document.getElementById('giftId').value;
+        const passInput = document.getElementById('claimPass').value;
+        
+        if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
 
-                const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
-                showStatus("MetaMask onayı bekleniyor...");
-                
-                // Gas limitini otomatik hesaplaması için bırakıyoruz ama hata verirse manuel ekleriz
-                const tx = await contract.hediyeOlustur(hash, { 
-                    value: ethers.parseEther(amt) 
-                });
+        // ID'yi sayıya, şifreyi temiz metne çeviriyoruz
+        const cleanId = parseInt(idInput);
+        const cleanPass = passInput.trim();
 
-                showStatus("İşlem ağa gönderildi. Onaylanıyor...");
-                await tx.wait();
-                
-                const count = await contract.hediyeSayaci();
-                showStatus(`🎁 BAŞARILI! Hediye ID: ${Number(count) - 1}. Şifreniz: ${pass}`);
-            } catch (e) { 
-                console.error("Detaylı Hata:", e);
-                const errorMsg = e.reason || e.message || "Bilinmeyen Hata";
-                showStatus("Hata: " + errorMsg); 
-            }
-        }
+        showStatus("İşlem onayınız bekleniyor...");
+
+        // Kontrat fonksiyonunu doğrudan çağırıyoruz
+        const tx = await contract.hediyeAl(cleanId, cleanPass);
+
+        showStatus("Blok onayı bekleniyor...");
+        await tx.wait();
+        
+        showStatus("✅ Tebrikler! Hediye cüzdanınıza aktarıldı.");
+    } catch (e) {
+        console.error("Detaylı Hata:", e);
+        // Hatanın içindeki asıl mesajı kullanıcıya göster
+        const errorReason = e.reason || "Şifre yanlış veya hediye zaten alınmış.";
+        showStatus("Hata: " + errorReason);
+    }
+}
 
         async function claimGift() {
     try {
