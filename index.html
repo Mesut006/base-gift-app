@@ -91,22 +91,30 @@
         }
 
         async function claimGift() {
-            try {
-                const id = document.getElementById('giftId').value;
-                const pass = document.getElementById('claimPass').value;
-                
-                if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
-                
-                showStatus("Kontrol ediliyor...");
-                const tx = await contract.hediyeAl(id, pass);
-                await tx.wait();
-                showStatus("Ödeme cüzdanınıza başarıyla gönderildi!");
-            } catch (e) { 
-                console.error(e);
-                showStatus("Hata: Şifre yanlış, ID hatalı veya hediye zaten alınmış."); 
-            }
-        }
+    try {
+        const id = document.getElementById('giftId').value;
+        const pass = document.getElementById('claimPass').value;
+        
+        if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
+        if (id === "" || !pass) return showStatus("Hata: ID ve Şifre girmelisiniz!");
 
+        showStatus("Kontratla iletişim kuruluyor...");
+
+        // KRİTİK DÜZELTME: İşlemi daha detaylı hata yakalayacak şekilde çağırıyoruz
+        const tx = await contract.hediyeAl(BigInt(id), pass.trim()); 
+        
+        showStatus("Onay bekleniyor... Lütfen MetaMask'ı kontrol edin.");
+        await tx.wait();
+        
+        showStatus("✅ BAŞARILI! Para cüzdanınıza aktarıldı.");
+    } catch (e) { 
+        console.error("Claim Hatası:", e);
+        // Hatanın sebebini kullanıcıya net göster
+        let mesaj = "Şifre yanlış veya hediye zaten alınmış olabilir.";
+        if (e.reason) mesaj = "Hata Nedeni: " + e.reason;
+        showStatus("Hata: " + mesaj); 
+    }
+}
         function showStatus(msg) {
             const s = document.getElementById('status');
             s.innerText = msg;
