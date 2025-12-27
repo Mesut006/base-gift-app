@@ -31,9 +31,9 @@
         <p id="status" class="mt-4 text-center text-sm font-mono bg-black/30 p-2 rounded hidden"></p>
     </div>
 
-    <script>
+ <script>
         // 0x2ff7991F6a895813D687a31e54D79c329CC4B8F7
-        const contractAddress = "0x2ff7991F6a895813D687a31e54D79c329CC4B8F7";
+        const contractAddress = "0x...YENİ_ADRESİNİZ..."; 
         
         const abi = [
             "function hediyeOlustur(bytes32 _sifreHash) public payable",
@@ -44,39 +44,67 @@
         let signer;
         let contract;
 
+        // Cüzdan bağlama butonu
         document.getElementById('connectBtn').onclick = async () => {
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            signer = await provider.getSigner();
-            contract = new ethers.Contract(contractAddress, abi, signer);
-            document.getElementById('connectBtn').innerText = "Bağlandı ✅";
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const provider = new ethers.BrowserProvider(window.ethereum);
+                    await provider.send("eth_requestAccounts", []);
+                    signer = await provider.getSigner();
+                    contract = new ethers.Contract(contractAddress, abi, signer);
+                    document.getElementById('connectBtn').innerText = "Bağlandı ✅";
+                    showStatus("Cüzdan bağlandı, işlem yapabilirsiniz.");
+                } catch (err) {
+                    showStatus("Bağlantı hatası: " + err.message);
+                }
+            } else {
+                alert("Lütfen MetaMask yükleyin!");
+            }
         };
 
         async function createGift() {
             try {
                 const amt = document.getElementById('amount').value;
                 const pass = document.getElementById('createPass').value;
+                
+                if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
+                if (!amt || amt <= 0) return showStatus("Hata: Geçerli bir miktar girin!");
+
                 const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
+                showStatus("MetaMask onayı bekleniyor...");
                 
-                showStatus("İşlem hazırlanıyor...");
-                
-                // Güvenlik: Fonksiyonu açıkça çağırıyoruz
-                const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amt) });
+                // Gas limitini otomatik hesaplaması için bırakıyoruz ama hata verirse manuel ekleriz
+                const tx = await contract.hediyeOlustur(hash, { 
+                    value: ethers.parseEther(amt) 
+                });
+
+                showStatus("İşlem ağa gönderildi. Onaylanıyor...");
                 await tx.wait();
                 
                 const count = await contract.hediyeSayaci();
-                showStatus("BAŞARILI! Hediye ID'niz: " + (Number(count) - 1));
-            } catch (e) { showStatus("Hata: " + e.reason); }
+                showStatus(`🎁 BAŞARILI! Hediye ID: ${Number(count) - 1}. Şifreniz: ${pass}`);
+            } catch (e) { 
+                console.error("Detaylı Hata:", e);
+                const errorMsg = e.reason || e.message || "Bilinmeyen Hata";
+                showStatus("Hata: " + errorMsg); 
+            }
         }
 
         async function claimGift() {
             try {
                 const id = document.getElementById('giftId').value;
                 const pass = document.getElementById('claimPass').value;
+                
+                if (!signer) return showStatus("Hata: Önce cüzdanı bağlayın!");
+                
                 showStatus("Kontrol ediliyor...");
                 const tx = await contract.hediyeAl(id, pass);
                 await tx.wait();
-                showStatus("Ödeme cüzdanınıza gönderildi!");
-            } catch (e) { showStatus("Hata: Şifre yanlış veya ID hatalı."); }
+                showStatus("Ödeme cüzdanınıza başarıyla gönderildi!");
+            } catch (e) { 
+                console.error(e);
+                showStatus("Hata: Şifre yanlış, ID hatalı veya hediye zaten alınmış."); 
+            }
         }
 
         function showStatus(msg) {
