@@ -35,10 +35,31 @@
         // 0x2ff7991F6a895813D687a31e54D79c329CC4B8F7
         const contractAddress = "0x2ff7991F6a895813D687a31e54D79c329CC4B8F7"; 
         
-        const abi = [
-    "function hediyeOlustur(bytes32 _sifreHash) public payable",
-    "function hediyeAl(uint256 _id, string _sifre) public", // memory kelimesini sildik, ethers otomatik anlar
-    "function hediyeSayaci() public view returns (uint256)"
+       const abi = [
+    {
+        "inputs": [{ "internalType": "bytes32", "name": "_sifreHash", "type": "bytes32" }],
+        "name": "hediyeOlustur",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            { "internalType": "uint256", "name": "_id", "type": "uint256" },
+            { "internalType": "string", "name": "_sifre", "type": "string" }
+        ],
+        "name": "hediyeAl",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "hediyeSayaci",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+    }
 ];
 
         let signer;
