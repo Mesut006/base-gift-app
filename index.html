@@ -4,35 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BaseGift | On-Chain Hediye</title>
-    <script src="https://unpkg.com/@web3modal/ethers@5.1.5/dist/index.umd.js"> /script>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@web3modal/ethers@5.1.5/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@web3modal/ethers@5.1.5/dist/index.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at top right, #1e40af, #000); min-height: 100vh; color: white; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: radial-gradient(circle at top right, #1e40af, #000); 
+            min-height: 100vh; 
+            color: white;
+            margin: 0;
+            overflow-x: hidden;
+        }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .btn-primary { background: linear-gradient(45deg, #3b82f6, #2563eb); transition: all 0.3s ease; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3); }
+        /* Görsel bozulmayı engellemek için Web3Modal katmanını sabitleyelim */
+        w3m-modal { position: relative; z-index: 9999; }
     </style>
 </head>
 <body class="p-4 md:p-12">
     <div class="max-w-4xl mx-auto">
         <div class="flex flex-col items-center mb-12 border-b border-white/10 pb-8">
             <div class="w-full flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-black italic tracking-tighter">BASE<span class="text-blue-500">GIFT</span></h1>
+                <h1 class="text-2xl font-black italic tracking-tighter uppercase">BASE<span class="text-blue-500">GIFT</span></h1>
                 <button id="connectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full text-xs font-bold transition-all border border-blue-400/30">Cüzdanı Bağla</button>
             </div>
             
-            <div class="flex gap-4 mb-4">
-                <a href="https://x.com/soylebisey" target="_blank" class="glass p-3 rounded-full hover:bg-blue-500/20 transition group">
-                    <svg class="w-5 h-5 fill-current group-hover:text-blue-400" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                </a>
-                <a href="https://github.com/Mesut006" target="_blank" class="glass p-3 rounded-full hover:bg-white/10 transition group">
-                    <svg class="w-5 h-5 fill-current group-hover:text-gray-400" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                </a>
-            </div>
             <p class="text-[10px] text-gray-500 tracking-[0.2em] uppercase text-center">Developed by <span class="text-blue-400 font-bold">@MesutGoktug</span></p>
         </div>
 
@@ -40,17 +39,17 @@
             <div class="glass p-8 rounded-3xl">
                 <h2 class="text-xl font-bold mb-4">Hediye Gönder 🎁</h2>
                 <div class="space-y-4">
-                    <input id="amount" type="number" placeholder="Miktar (ETH)" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500">
-                    <input id="createPass" type="password" placeholder="Gizli Şifre" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500">
+                    <input id="amount" type="number" step="0.01" placeholder="Miktar (ETH)" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
+                    <input id="createPass" type="password" placeholder="Gizli Şifre" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
                     <button onclick="createGift()" class="w-full btn-primary py-4 rounded-xl font-bold">Paketi Mühürle</button>
                 </div>
             </div>
             <div class="glass p-8 rounded-3xl">
                 <h2 class="text-xl font-bold mb-4">Hediye Al 🔑</h2>
                 <div class="space-y-4">
-                    <input id="giftId" type="number" placeholder="Hediye ID" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500">
-                    <input id="claimPass" type="password" placeholder="Şifreyi Gir" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500">
-                    <button onclick="claimGift()" class="w-full bg-white/10 border border-white/20 py-4 rounded-xl font-bold hover:bg-white/20">Parayı Çek</button>
+                    <input id="giftId" type="number" placeholder="Hediye ID" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
+                    <input id="claimPass" type="password" placeholder="Şifreyi Gir" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
+                    <button onclick="claimGift()" class="w-full bg-white/10 border border-white/20 py-4 rounded-xl font-bold hover:bg-white/20 text-white">Parayı Çek</button>
                 </div>
             </div>
         </div>
@@ -58,26 +57,20 @@
         <div class="glass p-6 rounded-3xl mb-8">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-lg font-bold">Oluşturduğum Hediyeler 📜</h2>
-                <button onclick="listMyGifts()" class="text-[10px] bg-blue-600/20 px-4 py-2 rounded-lg border border-blue-500/30 font-bold">LİSTEYİ YENİLE</button>
+                <button onclick="listMyGifts()" class="text-[10px] bg-blue-600/20 px-4 py-2 rounded-lg border border-blue-500/30 font-bold">YENİLE</button>
             </div>
             <div id="giftList" class="grid sm:grid-cols-2 gap-4">
-                <p class="text-gray-500 text-[10px] italic col-span-full text-center">Bağlanınca listelenecek.</p>
+                <p class="text-gray-500 text-[10px] italic col-span-full text-center">Cüzdan bağlanınca veriler gelecek.</p>
             </div>
         </div>
 
         <div id="statusBox" class="mt-8 glass p-6 rounded-2xl hidden text-center">
             <p id="status" class="text-blue-300 font-mono text-sm"></p>
-            <div id="shareArea" class="mt-4 hidden border-t border-white/10 pt-4">
-                <div class="flex gap-2">
-                    <input id="shareUrl" readonly class="w-full bg-black/30 p-2 rounded text-xs outline-none text-white">
-                    <button onclick="copyLink()" class="bg-blue-600 px-4 rounded text-xs font-bold">Kopyala</button>
-                </div>
-            </div>
         </div>
     </div>
 
     <script>
-        // Değişkenler
+        // --- 1. AYARLAR ---
         const contractAddress = "0x40528Fa18B169724789D756218cE0652018ada33";
         const abi = [
             {"inputs":[{"internalType":"bytes32","name":"_sifreHash","type":"bytes32"}],"name":"hediyeOlustur","outputs":[],"stateMutability":"payable","type":"function"},
@@ -87,64 +80,75 @@
             {"inputs":[],"name":"hediyeSayaci","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
         ];
 
-     
-        const projectId = 'f302bade5f99a4e406c852288174b049'; 
+        // REOWN ID (Lütfen panelden aldığın ID'yi buraya yaz)
+        const projectId = 'BURAYA_KENDI_PROJECT_ID_YAPISTIR'; 
 
-        let signer, contract, modal;
+        let signer, contract, modal, currentWeb3Lib;
 
-        // Sayfa tamamen yüklendiğinde Web3Modal'ı başlat
-        window.addEventListener('load', () => {
-            if (!window.Web3Modal) return console.error("Web3Modal yüklenemedi!");
+        // --- 2. GÜVENLİ BAŞLATICI ---
+        function init() {
+            // Web3ModalEthers veya Web3Modal olarak yüklenebilir
+            currentWeb3Lib = window.Web3Modal || window.Web3ModalEthers;
 
-            const { createWeb3Modal, defaultConfig } = window.Web3Modal;
-            const baseSepolia = {
-                chainId: 84532,
-                name: 'Base Sepolia',
-                currency: 'ETH',
-                explorerUrl: 'https://sepolia.basescan.org',
-                rpcUrl: 'https://sepolia.base.org'
-            };
+            if (!currentWeb3Lib) {
+                console.log("Kütüphane bekleniyor...");
+                setTimeout(init, 500);
+                return;
+            }
 
+            const { createWeb3Modal, defaultConfig } = currentWeb3Lib;
+            
             modal = createWeb3Modal({
                 ethersConfig: defaultConfig({ metadata: { name: 'BaseGift', url: window.location.origin } }),
-                chains: [baseSepolia],
+                chains: [{
+                    chainId: 84532,
+                    name: 'Base Sepolia',
+                    currency: 'ETH',
+                    explorerUrl: 'https://sepolia.basescan.org',
+                    rpcUrl: 'https://sepolia.base.org'
+                }],
                 projectId,
                 themeMode: 'dark'
             });
 
-            // Bağlantı durumunu izle
-            modal.subscribeProvider(({ provider: wp, isConnected }) => {
-                if (isConnected && wp) initEthers(wp);
-            });
-
+            // Buton Olayı
             document.getElementById('connectBtn').onclick = () => {
                 const wp = modal.getWalletProvider();
-                wp ? initEthers(wp) : modal.open();
+                wp ? setupEthers(wp) : modal.open();
             };
-        });
 
-        async function initEthers(wp) {
-            const provider = new window.Web3Modal.ethers.BrowserProvider(wp);
-            signer = await provider.getSigner();
-            contract = new window.Web3Modal.ethers.Contract(contractAddress, abi, signer);
-            const addr = await signer.getAddress();
-            document.getElementById('connectBtn').innerText = addr.slice(0,6) + "..." + addr.slice(-4);
-            showStatus("Bağlantı Başarılı ✅");
-            listMyGifts();
+            // Otomatik Bağlantı İzleme
+            modal.subscribeProvider(({ provider: wp, isConnected }) => {
+                if (isConnected && wp) setupEthers(wp);
+            });
         }
 
+        async function setupEthers(wp) {
+            try {
+                const provider = new currentWeb3Lib.ethers.BrowserProvider(wp);
+                signer = await provider.getSigner();
+                contract = new currentWeb3Lib.ethers.Contract(contractAddress, abi, signer);
+                const addr = await signer.getAddress();
+                document.getElementById('connectBtn').innerText = addr.slice(0,6) + "..." + addr.slice(-4);
+                showStatus("Bağlandı ✅");
+                listMyGifts();
+            } catch (e) { console.error("Ethers Hatası:", e); }
+        }
+
+        // --- 3. FONKSİYONLAR ---
         async function createGift() {
             try {
                 const amt = document.getElementById('amount').value;
                 const pass = document.getElementById('createPass').value;
                 if(!signer) return modal.open();
-                const hash = window.Web3Modal.ethers.keccak256(window.Web3Modal.ethers.toUtf8Bytes(pass));
-                showStatus("Onay Bekleniyor...");
-                const tx = await contract.hediyeOlustur(hash, { value: window.Web3Modal.ethers.parseEther(amt) });
+                
+                const hash = currentWeb3Lib.ethers.keccak256(currentWeb3Lib.ethers.toUtf8Bytes(pass));
+                showStatus("Cüzdan onayı bekleniyor...");
+                const tx = await contract.hediyeOlustur(hash, { value: currentWeb3Lib.ethers.parseEther(amt) });
                 await tx.wait();
-                showStatus("✅ Hediye Hazır!");
+                showStatus("✅ Hediye başarıyla oluşturuldu!");
                 listMyGifts();
-            } catch (e) { showStatus("Hata: " + e.message); }
+            } catch (e) { showStatus("Hata: " + (e.reason || e.message)); }
         }
 
         async function claimGift() {
@@ -152,16 +156,17 @@
                 const id = document.getElementById('giftId').value;
                 const pass = document.getElementById('claimPass').value;
                 if(!signer) return modal.open();
-                showStatus("Çözülüyor...");
-                const tx = await contract.hediyeAl(BigInt(id), pass.trim());
+                
+                showStatus("İşlem yapılıyor...");
+                const tx = await contract.hediyeAl(BigInt(id), pass);
                 await tx.wait();
-                showStatus("🎉 ETH Alındı!");
+                showStatus("🎉 ETH başarıyla alındı!");
                 listMyGifts();
-            } catch (e) { showStatus("Hata: Şifre yanlış!"); }
+            } catch (e) { showStatus("Hata: Şifre yanlış veya hediye alınmış."); }
         }
 
         async function listMyGifts() {
-            if(!contract) return;
+            if(!contract || !signer) return;
             const listDiv = document.getElementById('giftList');
             listDiv.innerHTML = "<p class='col-span-full text-center text-xs animate-pulse'>Yükleniyor...</p>";
             try {
@@ -170,17 +175,16 @@
                 let html = "";
                 for(let i = ids.length - 1; i >= 0; i--) {
                     const gift = await contract.hediyeler(ids[i]);
-                    const ethMiktar = window.Web3Modal.ethers.formatEther(gift.miktar);
+                    const eth = currentWeb3Lib.ethers.formatEther(gift.miktar);
                     html += `
-                    <div class="bg-white/5 p-4 rounded-2xl border border-white/10 flex justify-between items-center">
-                        <div><p class="text-[10px] text-blue-400 font-mono">ID: #${ids[i]}</p><p class="font-bold text-sm">${ethMiktar} ETH</p></div>
-                        <div class="text-right">
-                            <span class="text-[10px] ${gift.alindi ? 'text-green-400' : 'text-yellow-400'}">${gift.alindi ? 'Alındı' : 'Bekliyor'}</span>
-                            <button onclick="copySpecificLink(${ids[i]})" class="block text-[8px] underline opacity-50 hover:opacity-100">LİNK</button>
-                        </div>
-                    </div>`;
+                        <div class="bg-white/5 p-4 rounded-2xl border border-white/10 flex justify-between items-center">
+                            <div><p class="text-[10px] text-blue-400 font-mono">ID: #${ids[i]}</p><p class="font-bold text-sm">${eth} ETH</p></div>
+                            <div class="text-right">
+                                <span class="text-[10px] ${gift.alindi ? 'text-green-400' : 'text-yellow-400'}">${gift.alindi ? 'ALINDI' : 'BEKLIYOR'}</span>
+                            </div>
+                        </div>`;
                 }
-                listDiv.innerHTML = html || "<p class='col-span-full text-center text-xs'>Henüz hediye yok.</p>";
+                listDiv.innerHTML = html || "<p class='col-span-full text-center text-xs'>Hediye bulunamadı.</p>";
             } catch (e) { console.error(e); }
         }
 
@@ -191,21 +195,8 @@
             if (msg.includes("✅") || msg.includes("🎉")) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         }
 
-        function copySpecificLink(id) {
-            const url = window.location.origin + window.location.pathname + "?id=" + id;
-            navigator.clipboard.writeText(url);
-            alert("Hediye #" + id + " linki kopyalandı!");
-        }
-
-        function copyLink() {
-            navigator.clipboard.writeText(document.getElementById('shareUrl').value);
-            alert("Kopyalandı!");
-        }
-
-        window.onload = () => {
-            const id = new URLSearchParams(window.location.search).get('id');
-            if(id) document.getElementById('giftId').value = id;
-        };
+        // Başlat
+        window.onload = init;
     </script>
 </body>
 </html>
