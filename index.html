@@ -6,6 +6,7 @@
     <title>BaseGift | On-Chain</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@web3modal/ethers@5.1.5/dist/index.umd.js"></script>
     
     <style>
         body { background: #050a18; color: white; font-family: sans-serif; }
@@ -19,92 +20,101 @@
             <button id="mainConnectBtn" class="bg-blue-600 px-6 py-2 rounded-full font-bold text-sm">Cüzdanı Bağla</button>
         </div>
 
-        <div class="glass p-6 space-y-4 text-center" id="loadingView">
-            <p class="text-blue-400 animate-pulse text-sm">Sistem Hazırlanıyor...</p>
-        </div>
-
-        <div id="mainView" class="hidden space-y-6">
+        <div id="mainView" class="space-y-6">
             <div class="glass p-6 space-y-4">
                 <h2 class="text-lg font-bold">Hediye Gönder 🎁</h2>
-                <input id="amount" type="number" placeholder="Miktar (ETH)" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
+                <input id="amount" type="number" step="0.01" placeholder="Miktar (ETH)" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
                 <input id="createPass" type="password" placeholder="Gizli Şifre" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
-                <button id="sendBtn" class="w-full bg-blue-500 py-3 rounded-xl font-bold opacity-50 cursor-not-allowed" disabled>Cüzdan Bağla</button>
+                <button onclick="createGift()" id="sendBtn" class="w-full bg-blue-500 py-3 rounded-xl font-bold">Mühürle</button>
             </div>
 
             <div class="glass p-6 space-y-4">
                 <h2 class="text-lg font-bold">Hediye Al 🔑</h2>
                 <input id="giftId" type="number" placeholder="Hediye ID" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
                 <input id="claimPass" type="password" placeholder="Şifreyi Gir" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
-                <button id="receiveBtn" class="w-full bg-white/10 py-3 rounded-xl font-bold opacity-50 cursor-not-allowed" disabled>Cüzdan Bağla</button>
+                <button onclick="claimGift()" id="receiveBtn" class="w-full bg-white/10 py-3 rounded-xl font-bold">Parayı Çek</button>
             </div>
         </div>
         
         <p id="statusLabel" class="text-center text-xs text-blue-400 font-mono"></p>
     </div>
 
-    <script type="module">
-        import { createWeb3Modal, defaultConfig } from 'https://unpkg.com/@web3modal/ethers@5.1.5/dist/index.js'
-
-        const projectId = '76e26710777553f17377f0a927a445d4';
+    <script>
+        // Bilgiler
         const contractAddress = "0x40528Fa18B169724789D756218cE0652018ada33";
         const abi = [{"inputs":[{"internalType":"bytes32","name":"_sifreHash","type":"bytes32"}],"name":"hediyeOlustur","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_id","type":"uint256"},{"internalType":"string","name":"_sifre","type":"string"}],"name":"hediyeAl","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_olusturan","type":"address"}],"name":"kullaniciHediyeleri","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"hediyeler","outputs":[{"internalType":"address","name":"olusturan","type":"address"},{"internalType":"bytes32","name":"sifreHash","type":"bytes32"},{"internalType":"uint256","name":"miktar","type":"uint256"},{"internalType":"bool","name":"alindi","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"hediyeSayaci","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
+        const projectId = '76e26710777553f17377f0a927a445d4';
 
-        // Arayüz Hazırlığı
-        document.getElementById('loadingView').classList.add('hidden');
-        document.getElementById('mainView').classList.remove('hidden');
+        let signer, contract, modal;
 
-        const modal = createWeb3Modal({
-            ethersConfig: defaultConfig({ metadata: { name: 'BaseGift', url: window.location.origin } }),
-            chains: [{
-                chainId: 84532,
-                name: 'Base Sepolia',
-                currency: 'ETH',
-                explorerUrl: 'https://sepolia.basescan.org',
-                rpcUrl: 'https://sepolia.base.org'
-            }],
-            projectId,
-            themeMode: 'dark'
-        });
-
-        let signer, contract;
-
-        document.getElementById('mainConnectBtn').onclick = () => modal.open();
-
-        modal.subscribeProvider(async ({ provider: wp, isConnected }) => {
-            if (isConnected && wp) {
-                const provider = new ethers.BrowserProvider(wp);
-                signer = await provider.getSigner();
-                contract = new ethers.Contract(contractAddress, abi, signer);
-                
-                const addr = await signer.getAddress();
-                document.getElementById('mainConnectBtn').innerText = addr.slice(0,6) + "..." + addr.slice(-4);
-                
-                // Butonları aç
-                const btns = [document.getElementById('sendBtn'), document.getElementById('receiveBtn')];
-                btns.forEach(b => {
-                    b.disabled = false;
-                    b.classList.remove('opacity-50', 'cursor-not-allowed');
-                    b.innerText = b.id === 'sendBtn' ? 'Mühürle' : 'Parayı Çek';
-                });
-                document.getElementById('statusLabel').innerText = "Cüzdan Hazır.";
+        // Başlatma
+        function init() {
+            // UMD sürümü kütüphaneyi window.Web3ModalEthers içine atar
+            const lib = window.Web3ModalEthers;
+            if (!lib) {
+                setTimeout(init, 300);
+                return;
             }
-        });
 
-        // Global fonksiyonlar
-        window.createGift = async () => {
-            const amt = document.getElementById('amount').value;
-            const pass = document.getElementById('createPass').value;
-            const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
-            const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amt) });
-            await tx.wait();
-            alert("Hediye Oluşturuldu!");
-        };
+            const { createWeb3Modal, defaultConfig } = lib;
+            modal = createWeb3Modal({
+                ethersConfig: defaultConfig({ metadata: { name: 'BaseGift', url: window.location.origin } }),
+                chains: [{
+                    chainId: 84532,
+                    name: 'Base Sepolia',
+                    currency: 'ETH',
+                    explorerUrl: 'https://sepolia.basescan.org',
+                    rpcUrl: 'https://sepolia.base.org'
+                }],
+                projectId,
+                themeMode: 'dark'
+            });
 
-        window.claimGift = async () => {
-            const tx = await contract.hediyeAl(BigInt(document.getElementById('giftId').value), document.getElementById('claimPass').value);
-            await tx.wait();
-            alert("Para Alındı!");
-        };
+            document.getElementById('mainConnectBtn').onclick = () => {
+                const wp = modal.getWalletProvider();
+                wp ? setup(wp) : modal.open();
+            };
+
+            modal.subscribeProvider(({ provider: wp, isConnected }) => {
+                if (isConnected && wp) setup(wp);
+            });
+        }
+
+        async function setup(wp) {
+            const provider = new ethers.BrowserProvider(wp);
+            signer = await provider.getSigner();
+            contract = new ethers.Contract(contractAddress, abi, signer);
+            const addr = await signer.getAddress();
+            document.getElementById('mainConnectBtn').innerText = addr.slice(0,6) + "..." + addr.slice(-4);
+            document.getElementById('statusLabel').innerText = "Cüzdan Hazır ✅";
+        }
+
+        async function createGift() {
+            try {
+                if (!signer) return modal.open();
+                const amt = document.getElementById('amount').value;
+                const pass = document.getElementById('createPass').value;
+                const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
+                document.getElementById('statusLabel').innerText = "Cüzdan onayı bekleniyor...";
+                const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amt) });
+                await tx.wait();
+                document.getElementById('statusLabel').innerText = "Hediye Başarıyla Mühürlendi! 🎉";
+            } catch (e) { alert("Hata: " + e.message); }
+        }
+
+        async function claimGift() {
+            try {
+                if (!signer) return modal.open();
+                const id = document.getElementById('giftId').value;
+                const pass = document.getElementById('claimPass').value;
+                document.getElementById('statusLabel').innerText = "İşlem yapılıyor...";
+                const tx = await contract.hediyeAl(BigInt(id), pass);
+                await tx.wait();
+                document.getElementById('statusLabel').innerText = "Hediye Alındı! 🎁";
+            } catch (e) { alert("Şifre yanlış veya hediye alınmış."); }
+        }
+
+        window.onload = init;
     </script>
 </body>
 </html>
