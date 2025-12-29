@@ -6,7 +6,6 @@
     <title>BaseGift | On-Chain</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-    <script src="appkit.js"></script>
     
     <style>
         body { background: #050a18; color: white; font-family: sans-serif; }
@@ -20,14 +19,14 @@
             <button id="mainConnectBtn" class="bg-blue-600 px-6 py-2 rounded-full font-bold text-sm">Cüzdanı Bağla</button>
         </div>
 
-        <div class="glass p-6 space-y-4 text-center">
+        <div class="glass p-6 space-y-4">
             <h2 class="text-lg font-bold">Hediye Gönder 🎁</h2>
             <input id="amount" type="number" step="0.01" placeholder="Miktar (ETH)" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
             <input id="createPass" type="password" placeholder="Gizli Şifre" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
             <button onclick="createGift()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold transition-all">Mühürle</button>
         </div>
 
-        <div class="glass p-6 space-y-4 text-center">
+        <div class="glass p-6 space-y-4">
             <h2 class="text-lg font-bold">Hediye Al 🔑</h2>
             <input id="giftId" type="number" placeholder="Hediye ID" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
             <input id="claimPass" type="password" placeholder="Şifreyi Gir" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
@@ -37,61 +36,67 @@
         <p id="statusLabel" class="text-center text-xs text-blue-400 font-mono"></p>
     </div>
 
-    <script>
+    <script type="module">
+        import { createWeb3Modal, defaultConfig } from 'https://esm.sh/@web3modal/ethers@5.1.5'
+
         const contractAddress = "0x40528Fa18B169724789D756218cE0652018ada33";
         const abi = [{"inputs":[{"internalType":"bytes32","name":"_sifreHash","type":"bytes32"}],"name":"hediyeOlustur","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_id","type":"uint256"},{"internalType":"string","name":"_sifre","type":"string"}],"name":"hediyeAl","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_olusturan","type":"address"}],"name":"kullaniciHediyeleri","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"hediyeler","outputs":[{"internalType":"address","name":"olusturan","type":"address"},{"internalType":"bytes32","name":"sifreHash","type":"bytes32"},{"internalType":"uint256","name":"miktar","type":"uint256"},{"internalType":"bool","name":"alindi","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"hediyeSayaci","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
         const projectId = '76e26710777553f17377f0a927a445d4';
 
-        let signer, contract, modal;
+        const modal = createWeb3Modal({
+            ethersConfig: defaultConfig({ metadata: { name: 'BaseGift', url: window.location.origin } }),
+            chains: [{
+                chainId: 84532,
+                name: 'Base Sepolia',
+                currency: 'ETH',
+                explorerUrl: 'https://sepolia.basescan.org',
+                rpcUrl: 'https://sepolia.base.org'
+            }],
+            projectId,
+            themeMode: 'dark'
+        });
 
-        window.onload = function() {
-            const { createWeb3Modal, defaultConfig } = window.Web3ModalEthers;
-            
-            modal = createWeb3Modal({
-                ethersConfig: defaultConfig({ metadata: { name: 'BaseGift', url: window.location.origin } }),
-                chains: [{
-                    chainId: 84532,
-                    name: 'Base Sepolia',
-                    currency: 'ETH',
-                    explorerUrl: 'https://sepolia.basescan.org',
-                    rpcUrl: 'https://sepolia.base.org'
-                }],
-                projectId,
-                themeMode: 'dark'
-            });
+        let signer, contract;
+        const btn = document.getElementById('mainConnectBtn');
+        const status = document.getElementById('statusLabel');
 
-            const btn = document.getElementById('mainConnectBtn');
-            btn.onclick = () => modal.open();
+        btn.onclick = () => modal.open();
 
-            modal.subscribeProvider(({ provider: wp, isConnected }) => {
-                if (isConnected && wp) {
-                    const provider = new ethers.BrowserProvider(wp);
-                    provider.getSigner().then(s => {
-                        signer = s;
-                        contract = new ethers.Contract(contractAddress, abi, signer);
-                        s.getAddress().then(a => {
-                            btn.innerText = a.slice(0,6)+"..."+a.slice(-4);
-                            document.getElementById('statusLabel').innerText = "Cüzdan Bağlı ✅";
-                        });
-                    });
-                }
-            });
+        modal.subscribeProvider(async ({ provider: wp, isConnected }) => {
+            if (isConnected && wp) {
+                const provider = new ethers.BrowserProvider(wp);
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(contractAddress, abi, signer);
+                const addr = await signer.getAddress();
+                btn.innerText = addr.slice(0,6) + "..." + addr.slice(-4);
+                status.innerText = "Cüzdan Bağlandı!";
+            }
+        });
+
+        window.createGift = async () => {
+            if (!signer) return modal.open();
+            try {
+                const amount = document.getElementById('amount').value;
+                const pass = document.getElementById('createPass').value;
+                const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
+                status.innerText = "Cüzdan onayı bekleniyor...";
+                const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amount) });
+                await tx.wait();
+                status.innerText = "Hediye Mühürlendi! ✅";
+            } catch (e) { status.innerText = "Hata oluştu."; }
         };
 
-        async function createGift() {
+        window.claimGift = async () => {
             if (!signer) return modal.open();
-            const hash = ethers.keccak256(ethers.toUtf8Bytes(document.getElementById('createPass').value));
-            const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(document.getElementById('amount').value) });
-            await tx.wait();
-            location.reload();
-        }
-
-        async function claimGift() {
-            if (!signer) return modal.open();
-            const tx = await contract.hediyeAl(BigInt(document.getElementById('giftId').value), document.getElementById('claimPass').value);
-            await tx.wait();
-            alert("Hediye Alındı!");
-        }
+            try {
+                const id = document.getElementById('giftId').value;
+                const pass = document.getElementById('claimPass').value;
+                status.innerText = "İşlem yapılıyor...";
+                const tx = await contract.hediyeAl(BigInt(id), pass);
+                await tx.wait();
+                status.innerText = "Hediye Alındı! 🎁";
+            } catch (e) { status.innerText = "Şifre yanlış!"; }
+        };
     </script>
 </body>
 </html>
