@@ -13,9 +13,9 @@
     <style>
         body { font-family: sans-serif; background: radial-gradient(circle at top right, #1e40af, #000); min-height: 100vh; color: white; margin: 0; padding: 20px; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .btn-primary { background: linear-gradient(45deg, #3b82f6, #2563eb); transition: all 0.3s ease; }
-        input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 12px; border-radius: 12px; width: 100%; outline: none; }
-        input:focus { border-color: #3b82f6; }
+        .btn-blue { background: #0052ff; transition: all 0.3s; }
+        .btn-blue:hover { transform: scale(1.02); background: #0042cc; }
+        input { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 12px; border-radius: 12px; width: 100%; outline: none; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -23,29 +23,25 @@
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-between items-center mb-12 border-b border-white/10 pb-8">
             <h1 class="text-2xl font-black italic tracking-tighter uppercase">BASE<span class="text-blue-500">GIFT</span></h1>
-            <button id="connectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full text-xs font-bold transition-all border border-blue-400/30">Cüzdanı Bağla</button>
+            <button onclick="handleConnect()" id="connectBtn" class="btn-blue text-white px-6 py-2 rounded-full text-xs font-bold border border-blue-400/30">Cüzdanı Bağla</button>
         </div>
 
         <div class="grid md:grid-cols-2 gap-8 mb-8">
             <div class="glass p-8 rounded-3xl">
                 <h2 class="text-xl font-bold mb-4">Hediye Gönder 🎁</h2>
-                <div class="space-y-4">
-                    <input id="amount" type="number" step="0.01" placeholder="Miktar (ETH)">
-                    <input id="createPass" type="password" placeholder="Şifre">
-                    <button onclick="createGift()" class="w-full btn-primary py-4 rounded-xl font-bold">Paketi Mühürle</button>
-                </div>
+                <input id="amount" type="number" step="0.01" placeholder="Miktar (ETH)">
+                <input id="createPass" type="password" placeholder="Şifre">
+                <button onclick="createGift()" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-bold transition">Paketi Mühürle</button>
             </div>
             <div class="glass p-8 rounded-3xl">
                 <h2 class="text-xl font-bold mb-4">Hediye Al 🔑</h2>
-                <div class="space-y-4">
-                    <input id="giftId" type="number" placeholder="Hediye ID">
-                    <input id="claimPass" type="password" placeholder="Şifreyi Gir">
-                    <button onclick="claimGift()" class="w-full bg-white/10 border border-white/20 py-4 rounded-xl font-bold hover:bg-white/20">Parayı Çek</button>
-                </div>
+                <input id="giftId" type="number" placeholder="Hediye ID">
+                <input id="claimPass" type="password" placeholder="Şifreyi Gir">
+                <button onclick="claimGift()" class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-bold transition">Parayı Çek</button>
             </div>
         </div>
 
-        <div id="statusBox" class="mt-8 glass p-6 rounded-2xl hidden text-center">
+        <div id="statusBox" class="mt-8 glass p-6 rounded-2xl hidden text-center border-blue-500/30">
             <p id="status" class="text-blue-300 font-mono text-sm"></p>
         </div>
     </div>
@@ -54,19 +50,15 @@
         const contractAddress = "0x40528Fa18B169724789D756218cE0652018ada33";
         const abi = [{"inputs":[{"internalType":"bytes32","name":"_sifreHash","type":"bytes32"}],"name":"hediyeOlustur","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_id","type":"uint256"},{"internalType":"string","name":"_sifre","type":"string"}],"name":"hediyeAl","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_olusturan","type":"address"}],"name":"kullaniciHediyeleri","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"hediyeler","outputs":[{"internalType":"address","name":"olusturan","type":"address"},{"internalType":"bytes32","name":"sifreHash","type":"bytes32"},{"internalType":"uint256","name":"miktar","type":"uint256"},{"internalType":"bool","name":"alindi","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"hediyeSayaci","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
 
-        // BURAYI KENDİ PROJECT ID'NLE DEĞİŞTİR
+        // PROJECT ID BURAYA (Lütfen tırnak içine yapıştır)
         const projectId = '76e26710777553f17377f0a927a445d4'; 
 
         let signer, contract, modal;
 
-        async function initApp() {
-            if (!window.Web3Modal || !window.ethers) {
-                setTimeout(initApp, 200);
-                return;
-            }
-
+        // Sayfa açıldığında modal'ı hazırla
+        window.addEventListener('load', () => {
+            if (!window.Web3Modal) return;
             const { createWeb3Modal, defaultConfig } = window.Web3Modal;
-            
             modal = createWeb3Modal({
                 ethersConfig: defaultConfig({ metadata: { name: 'BaseGift', url: window.location.origin } }),
                 chains: [{
@@ -80,34 +72,41 @@
                 themeMode: 'dark'
             });
 
-            // Buton Olayı
-            document.getElementById('connectBtn').onclick = async () => {
-                const wp = modal.getWalletProvider();
-                if (wp) setupConnection(wp); else modal.open();
-            };
-
-            // Bağlantı başarılı olduğunda
+            // Bağlantı durumunu dinle
             modal.subscribeProvider(({ provider: wp, isConnected }) => {
-                if (isConnected && wp) setupConnection(wp);
+                if (isConnected && wp) setupEthers(wp);
             });
+        });
+
+        // Bağlan butonuna tıklandığında çalışan ana fonksiyon
+        async function handleConnect() {
+            if (!modal) return alert("Sistem henüz yükleniyor, lütfen bekleyin.");
+            const wp = modal.getWalletProvider();
+            if (wp) {
+                setupEthers(wp);
+            } else {
+                modal.open();
+            }
         }
 
-        async function setupConnection(wp) {
-            const provider = new ethers.BrowserProvider(wp);
-            signer = await provider.getSigner();
-            contract = new ethers.Contract(contractAddress, abi, signer);
-            const addr = await signer.getAddress();
-            document.getElementById('connectBtn').innerText = addr.slice(0,6) + "..." + addr.slice(-4);
-            showStatus("Cüzdan Bağlandı ✅");
+        async function setupEthers(wp) {
+            try {
+                const provider = new ethers.BrowserProvider(wp);
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(contractAddress, abi, signer);
+                const addr = await signer.getAddress();
+                document.getElementById('connectBtn').innerText = addr.slice(0,6) + "..." + addr.slice(-4);
+                showStatus("Cüzdan bağlandı ✅");
+            } catch (e) { console.error(e); }
         }
 
         async function createGift() {
             try {
-                if(!signer) return modal.open();
+                if(!signer) return handleConnect();
                 const amt = document.getElementById('amount').value;
                 const pass = document.getElementById('createPass').value;
                 const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
-                showStatus("İşlem onaylanıyor...");
+                showStatus("Onay bekleniyor...");
                 const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amt) });
                 await tx.wait();
                 showStatus("✅ Hediye oluşturuldu!");
@@ -117,13 +116,13 @@
 
         async function claimGift() {
             try {
-                if(!signer) return modal.open();
+                if(!signer) return handleConnect();
                 const id = document.getElementById('giftId').value;
                 const pass = document.getElementById('claimPass').value;
                 showStatus("Hediye alınıyor...");
                 const tx = await contract.hediyeAl(BigInt(id), pass);
                 await tx.wait();
-                showStatus("🎉 ETH alındı!");
+                showStatus("🎉 ETH başarıyla çekildi!");
                 confetti();
             } catch (e) { showStatus("Hata: Şifre yanlış!"); }
         }
@@ -133,8 +132,6 @@
             box.classList.remove('hidden');
             document.getElementById('status').innerText = msg;
         }
-
-        window.addEventListener('load', initApp);
     </script>
 </body>
 </html>
