@@ -89,7 +89,10 @@
                 const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
                 
                 showStatus("MetaMask onayı bekleniyor...");
-                const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amt) });
+                const tx = await contract.hediyeOlustur(hash, { 
+                value: ethers.parseEther(amt),
+                gasLimit: 150000 // Manuel gas limiti ekledik
+                });
                 
                 showStatus("İşlem ağda onaylanıyor (Base)...");
                 await tx.wait();
