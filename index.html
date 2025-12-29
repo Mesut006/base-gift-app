@@ -69,54 +69,62 @@
 
         let signer, contract;
 
-        // URL'den ID çekme (Otomatik doldurma için)
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
             if(urlParams.get('id')) document.getElementById('giftId').value = urlParams.get('id');
-        }
+        };
 
         document.getElementById('connectBtn').onclick = async () => {
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            signer = await provider.getSigner();
-            contract = new ethers.Contract(contractAddress, abi, signer);
-            document.getElementById('connectBtn').innerText = "Cüzdan Hazır";
+            try {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(contractAddress, abi, signer);
+                document.getElementById('connectBtn').innerText = "Cüzdan Bağlı";
+                showStatus("Cüzdan bağlandı, işleme hazır.");
+            } catch (err) {
+                showStatus("Bağlantı Hatası: " + err.message);
+            }
         };
 
         async function createGift() {
             try {
                 const amt = document.getElementById('amount').value;
                 const pass = document.getElementById('createPass').value;
-                const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
+                if(!signer) return showStatus("Önce cüzdanı bağlayın!");
                 
+                const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
                 showStatus("MetaMask onayı bekleniyor...");
                 const tx = await contract.hediyeOlustur(hash, { 
-                value: ethers.parseEther(amt),
-                gasLimit: 150000 // Manuel gas limiti ekledik
+                    value: ethers.parseEther(amt),
+                    gasLimit: 200000 
                 });
                 
-                showStatus("İşlem ağda onaylanıyor (Base)...");
+                showStatus("Onaylanıyor...");
                 await tx.wait();
                 
                 const count = await contract.hediyeSayaci();
                 const id = Number(count) - 1;
-                
-                showStatus(`✅ Hediye oluşturuldu! ID: ${id}`);
+                showStatus(`✅ Başarılı! ID: ${id}`);
                 showShareLink(id);
-               } catch (e) { 
-                console.error("Hata Detayı:", e);
-                // Hata mesajını daha detaylı gösterelim
-            const detailedError = e.message || e.reason || "Bilinmeyen Hata";
-            showStatus("Hata: " + detailedError); 
+            } catch (e) {
+                showStatus("Hata: " + (e.reason || e.message));
+            }
         }
+
         async function claimGift() {
             try {
                 const id = document.getElementById('giftId').value;
                 const pass = document.getElementById('claimPass').value;
-                showStatus("Şifre kontrol ediliyor...");
+                if(!signer) return showStatus("Önce cüzdanı bağlayın!");
+
+                showStatus("Kontrol ediliyor...");
                 const tx = await contract.hediyeAl(BigInt(id), pass);
                 await tx.wait();
-                showStatus("🎉 Başarılı! ETH cüzdanınıza aktarıldı.");
-            } catch (e) { showStatus("Hata: Şifre yanlış veya hediye alınmış."); }
+                showStatus("🎉 Para cüzdanınıza aktarıldı!");
+            } catch (e) {
+                showStatus("Hata: " + (e.reason || "Şifre yanlış olabilir."));
+            }
         }
 
         function showStatus(msg) {
@@ -136,7 +144,7 @@
             const copyText = document.getElementById('shareUrl');
             copyText.select();
             document.execCommand("copy");
-            alert("Link kopyalandı! Arkadaşına gönderebilirsin.");
+            alert("Link kopyalandı!");
         }
     </script>
 </body>
