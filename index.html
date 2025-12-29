@@ -11,30 +11,32 @@
     <style>
         body { background: #050a18; color: white; font-family: sans-serif; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; }
+        .btn-active { background: #2563eb; cursor: pointer; }
+        .btn-loading { background: #1e3a8a; cursor: not-allowed; opacity: 0.6; }
     </style>
 </head>
 <body class="p-6">
     <div class="max-w-md mx-auto space-y-6">
         <div class="flex justify-between items-center py-4">
-            <h1 class="text-xl font-bold italic uppercase tracking-tighter">BASE<span class="text-blue-500">GIFT</span></h1>
-            <button onclick="openWalletModal()" id="mainConnectBtn" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-full font-bold text-sm transition-all active:scale-95">Cüzdanı Bağla</button>
+            <h1 class="text-xl font-bold italic uppercase tracking-tighter text-blue-500">BASEGIFT</h1>
+            <button id="mainConnectBtn" class="btn-loading px-6 py-2 rounded-full font-bold text-sm transition-all" disabled>Hazırlanıyor...</button>
         </div>
 
         <div class="glass p-6 space-y-4">
             <h2 class="text-lg font-bold">Hediye Gönder 🎁</h2>
             <input id="amount" type="number" step="0.01" placeholder="Miktar (ETH)" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
             <input id="createPass" type="password" placeholder="Gizli Şifre" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
-            <button onclick="createGift()" id="sendBtn" class="w-full bg-blue-500 hover:bg-blue-600 py-3 rounded-xl font-bold transition-colors">Paketi Mühürle</button>
+            <button onclick="createGift()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold transition-all">Mühürle</button>
         </div>
 
         <div class="glass p-6 space-y-4">
             <h2 class="text-lg font-bold">Hediye Al 🔑</h2>
             <input id="giftId" type="number" placeholder="Hediye ID" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
             <input id="claimPass" type="password" placeholder="Şifreyi Gir" class="w-full bg-black/20 p-3 rounded-xl border border-white/10 outline-none">
-            <button onclick="claimGift()" id="receiveBtn" class="w-full bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold transition-colors">Parayı Çek</button>
+            <button onclick="claimGift()" class="w-full bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold transition-all">Parayı Çek</button>
         </div>
         
-        <p id="statusLabel" class="text-center text-xs text-blue-400 font-mono italic"></p>
+        <p id="statusLabel" class="text-center text-xs text-blue-400 font-mono"></p>
     </div>
 
     <script>
@@ -44,19 +46,11 @@
 
         let signer, contract, modal;
 
-        // Modal açma fonksiyonunu global yapıyoruz
-        window.openWalletModal = async () => {
-            if (!modal) {
-                alert("Sistem yükleniyor, lütfen tekrar deneyin.");
-                return;
-            }
-            modal.open();
-        };
-
-        function initializeApp() {
+        // Kütüphaneyi güvenli şekilde başlatan fonksiyon
+        function start() {
             const lib = window.Web3ModalEthers;
             if (!lib) {
-                setTimeout(initializeApp, 200);
+                setTimeout(start, 200);
                 return;
             }
 
@@ -74,46 +68,53 @@
                 themeMode: 'dark'
             });
 
-            // Bağlantı durumunu dinle
+            // Sistem hazır, butonu aktifleştir
+            const btn = document.getElementById('mainConnectBtn');
+            btn.innerText = "Cüzdanı Bağla";
+            btn.disabled = false;
+            btn.className = "bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-full font-bold text-sm transition-all active:scale-95";
+            
+            btn.onclick = () => modal.open();
+
             modal.subscribeProvider(({ provider: wp, isConnected }) => {
-                if (isConnected && wp) setupConnection(wp);
+                if (isConnected && wp) setup(wp);
             });
         }
 
-        async function setupConnection(wp) {
+        async function setup(wp) {
             const provider = new ethers.BrowserProvider(wp);
             signer = await provider.getSigner();
             contract = new ethers.Contract(contractAddress, abi, signer);
             const addr = await signer.getAddress();
             document.getElementById('mainConnectBtn').innerText = addr.slice(0,6) + "..." + addr.slice(-4);
-            document.getElementById('statusLabel').innerText = "Cüzdan Bağlı.";
+            document.getElementById('statusLabel').innerText = "Cüzdan Hazır ✅";
         }
 
-        window.createGift = async () => {
+        async function createGift() {
             try {
                 if (!signer) return modal.open();
                 const amt = document.getElementById('amount').value;
                 const pass = document.getElementById('createPass').value;
                 const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
-                const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amt) });
                 document.getElementById('statusLabel').innerText = "Onay bekleniyor...";
+                const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amt) });
                 await tx.wait();
-                document.getElementById('statusLabel').innerText = "İşlem Başarılı! ✅";
-            } catch (e) { console.error(e); }
-        };
+                document.getElementById('statusLabel').innerText = "Hediye oluşturuldu! 🎁";
+            } catch (e) { document.getElementById('statusLabel').innerText = "İşlem iptal edildi."; }
+        }
 
-        window.claimGift = async () => {
+        async function claimGift() {
             try {
                 if (!signer) return modal.open();
                 const id = document.getElementById('giftId').value;
                 const pass = document.getElementById('claimPass').value;
                 const tx = await contract.hediyeAl(BigInt(id), pass);
                 await tx.wait();
-                document.getElementById('statusLabel').innerText = "Hediye Alındı! 🎁";
-            } catch (e) { alert("Hata oluştu."); }
-        };
+                document.getElementById('statusLabel').innerText = "Hediye alındı! 🎉";
+            } catch (e) { alert("Hata: Şifre yanlış olabilir."); }
+        }
 
-        window.onload = initializeApp;
+        window.onload = start;
     </script>
 </body>
 </html>
