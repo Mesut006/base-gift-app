@@ -16,7 +16,7 @@
     <div class="max-w-md mx-auto space-y-6">
         <div class="flex justify-between items-center py-4">
             <h1 class="text-xl font-bold italic">BASEGIFT</h1>
-            <button id="mainConnectBtn" class="bg-blue-600 px-6 py-2 rounded-full font-bold text-sm">Cüzdanı Bağla</button>
+            <button id="mainConnectBtn" class="bg-blue-600 px-6 py-2 rounded-full font-bold text-sm transition-all active:scale-95">Cüzdanı Bağla</button>
         </div>
 
         <div class="glass p-6 space-y-4">
@@ -33,27 +33,24 @@
             <button onclick="claimGift()" class="w-full bg-white/10 py-3 rounded-xl font-bold">Parayı Çek</button>
         </div>
         
-        <p id="statusLabel" class="text-center text-xs text-blue-400"></p>
+        <p id="statusLabel" class="text-center text-xs text-blue-400 font-mono"></p>
     </div>
 
     <script>
         const contractAddress = "0x40528Fa18B169724789D756218cE0652018ada33";
         const abi = [{"inputs":[{"internalType":"bytes32","name":"_sifreHash","type":"bytes32"}],"name":"hediyeOlustur","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_id","type":"uint256"},{"internalType":"string","name":"_sifre","type":"string"}],"name":"hediyeAl","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_olusturan","type":"address"}],"name":"kullaniciHediyeleri","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"hediyeler","outputs":[{"internalType":"address","name":"olusturan","type":"address"},{"internalType":"bytes32","name":"sifreHash","type":"bytes32"},{"internalType":"uint256","name":"miktar","type":"uint256"},{"internalType":"bool","name":"alindi","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"hediyeSayaci","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
 
-        // LÜTFEN KENDİ ID'Nİ BURAYA YAZ
+        // LÜTFEN KENDİ REOWN ID'Nİ BURAYA YAZ
         const projectId = '76e26710777553f17377f0a927a445d4'; 
 
         let signer, contract, modal;
 
-        // Kütüphaneyi bulmak için agresif kontrol
-        function getWeb3ModalLib() {
-            return window.Web3Modal || window.Web3ModalEthers;
-        }
-
-        async function start() {
-            const lib = getWeb3ModalLib();
+        // Kütüphane yüklenene kadar bekleyen döngü
+        function start() {
+            const lib = window.Web3Modal || window.Web3ModalEthers;
+            
             if (!lib) {
-                console.log("Kütüphane aranıyor...");
+                console.log("Bağlantı kütüphanesi aranıyor...");
                 setTimeout(start, 500);
                 return;
             }
@@ -72,24 +69,24 @@
                 themeMode: 'dark'
             });
 
-            // Buton bağlantısı
-            document.getElementById('mainConnectBtn').addEventListener('click', async () => {
+            // Buton Olayı
+            document.getElementById('mainConnectBtn').onclick = async () => {
                 const wp = modal.getWalletProvider();
-                if (wp) connect(wp); else modal.open();
-            });
+                if (wp) setup(wp); else modal.open();
+            };
 
             modal.subscribeProvider(({ provider: wp, isConnected }) => {
-                if (isConnected && wp) connect(wp);
+                if (isConnected && wp) setup(wp);
             });
         }
 
-        async function connect(wp) {
+        async function setup(wp) {
             const provider = new ethers.BrowserProvider(wp);
             signer = await provider.getSigner();
             contract = new ethers.Contract(contractAddress, abi, signer);
             const addr = await signer.getAddress();
             document.getElementById('mainConnectBtn').innerText = addr.slice(0,6)+"..."+addr.slice(-4);
-            document.getElementById('statusLabel').innerText = "Bağlandı!";
+            document.getElementById('statusLabel').innerText = "Cüzdan Hazır ✅";
         }
 
         async function createGift() {
@@ -101,8 +98,8 @@
                 );
                 document.getElementById('statusLabel').innerText = "Onay bekleniyor...";
                 await tx.wait();
-                document.getElementById('statusLabel').innerText = "Başarılı!";
-            } catch (e) { alert(e.message); }
+                document.getElementById('statusLabel').innerText = "Hediye oluşturuldu!";
+            } catch (e) { alert("İşlem reddedildi veya hata oluştu."); }
         }
 
         async function claimGift() {
@@ -110,8 +107,8 @@
                 if (!signer) return modal.open();
                 const tx = await contract.hediyeAl(BigInt(document.getElementById('giftId').value), document.getElementById('claimPass').value);
                 await tx.wait();
-                document.getElementById('statusLabel').innerText = "Hediye alındı!";
-            } catch (e) { alert("Hata!"); }
+                document.getElementById('statusLabel').innerText = "Hediye başarıyla alındı!";
+            } catch (e) { alert("Şifre yanlış veya hediye zaten alınmış."); }
         }
 
         window.onload = start;
