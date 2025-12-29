@@ -74,3 +74,143 @@
 
         <div id="statusBox" class="mt-8 glass p-6 rounded-2xl hidden text-center">
             <p id="status" class="text-blue-300 font-mono text-sm"></p>
+            <div id="shareArea" class="mt-4 hidden border-t border-white/10 pt-4">
+                <p class="text-xs text-gray-500 mb-2 uppercase tracking-widest text-center">Hediye Linkin:</p>
+                <div class="flex gap-2">
+                    <input id="shareUrl" readonly class="w-full bg-black/30 p-2 rounded text-xs outline-none">
+                    <button onclick="copyLink()" class="bg-blue-600 px-4 rounded text-xs font-bold">Kopyala</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const contractAddress = "0x40528Fa18B169724789D756218cE0652018ada33";
+        const abi = [
+            {"inputs":[{"internalType":"bytes32","name":"_sifreHash","type":"bytes32"}],"name":"hediyeOlustur","outputs":[],"stateMutability":"payable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"_id","type":"uint256"},{"internalType":"string","name":"_sifre","type":"string"}],"name":"hediyeAl","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"address","name":"_olusturan","type":"address"}],"name":"kullaniciHediyeleri","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"hediyeler","outputs":[{"internalType":"address","name":"olusturan","type":"address"},{"internalType":"bytes32","name":"sifreHash","type":"bytes32"},{"internalType":"uint256","name":"miktar","type":"uint256"},{"internalType":"bool","name":"alindi","type":"bool"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"hediyeSayaci","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+        ];
+
+        let signer, contract;
+
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const idParam = urlParams.get('id');
+            if(idParam) document.getElementById('giftId').value = idParam;
+        };
+
+        document.getElementById('connectBtn').onclick = async () => {
+            if (!window.ethereum) return alert("MetaMask yüklü değil!");
+            try {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const network = await provider.getNetwork();
+                if (Number(network.chainId) !== 84532) {
+                    alert("Lütfen MetaMask'ı Base Sepolia ağına geçirin!");
+                    return;
+                }
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(contractAddress, abi, signer);
+                document.getElementById('connectBtn').innerText = "Bağlı ✅";
+                showStatus("Cüzdan bağlandı.");
+                listMyGifts(); // Bağlanınca listeyi çek
+            } catch (err) {
+                showStatus("Bağlantı Hatası: " + err.message);
+            }
+        };
+
+        async function createGift() {
+            try {
+                const amt = document.getElementById('amount').value;
+                const pass = document.getElementById('createPass').value;
+                if(!signer) return showStatus("Lütfen önce cüzdanı bağlayın!");
+                const hash = ethers.keccak256(ethers.toUtf8Bytes(pass));
+                showStatus("MetaMask onayı bekleniyor...");
+                const tx = await contract.hediyeOlustur(hash, { value: ethers.parseEther(amt) });
+                showStatus("Blok onayı bekleniyor...");
+                await tx.wait();
+                const count = await contract.hediyeSayaci();
+                const id = Number(count) - 1;
+                showStatus(`✅ Başarılı! Hediye ID: ${id}`);
+                showShareLink(id);
+                listMyGifts();
+            } catch (e) { showStatus("Hata: " + (e.reason || e.message)); }
+        }
+
+        async function claimGift() {
+            try {
+                const id = document.getElementById('giftId').value;
+                const pass = document.getElementById('claimPass').value;
+                if(!signer) return showStatus("Lütfen önce cüzdanı bağlayın!");
+                showStatus("Hediye alınıyor...");
+                const tx = await contract.hediyeAl(BigInt(id), pass.trim());
+                await tx.wait();
+                showStatus("🎉 ETH cüzdanınıza başarıyla aktarıldı!");
+                listMyGifts();
+            } catch (e) { showStatus("Hata: Şifre yanlış veya hediye alınmış."); }
+        }
+
+        async function listMyGifts() {
+            if(!contract || !signer) return;
+            const giftListDiv = document.getElementById('giftList');
+            giftListDiv.innerHTML = "<p class='text-center col-span-full animate-pulse text-[10px]'>Yükleniyor...</p>";
+            try {
+                const userAddress = await signer.getAddress();
+                const myGiftIds = await contract.kullaniciHediyeleri(userAddress);
+                let html = "";
+                if(myGiftIds.length === 0) {
+                    html = "<p class='text-center col-span-full text-gray-500 text-[10px]'>Henüz hediye yok.</p>";
+                } else {
+                    for(let i = myGiftIds.length - 1; i >= 0; i--) {
+                        const id = myGiftIds[i];
+                        const gift = await contract.hediyeler(id);
+                        const status = gift.alindi ? "✅ Alındı" : "⏳ Bekliyor";
+                        html += `
+                        <div class="bg-white/5 p-4 rounded-2xl border border-white/10 flex justify-between items-center">
+                            <div>
+                                <p class="text-[9px] text-blue-400 font-mono">ID: #${id}</p>
+                                <p class="font-bold text-sm">${ethers.formatEther(gift.miktar)} ETH</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[9px] font-bold ${gift.alindi ? 'text-green-400' : 'text-yellow-400'}">${status}</span>
+                                <button onclick="copySpecificLink(${id})" class="block mt-1 text-[8px] underline opacity-50 hover:opacity-100">Link</button>
+                            </div>
+                        </div>`;
+                    }
+                }
+                giftListDiv.innerHTML = html;
+            } catch (e) { giftListDiv.innerHTML = "<p class='text-red-400 text-[10px]'>Hata!</p>"; }
+        }
+
+        function copySpecificLink(id) {
+            const url = window.location.origin + window.location.pathname + "?id=" + id;
+            navigator.clipboard.writeText(url);
+            alert("ID #" + id + " linki kopyalandı!");
+        }
+
+        function showStatus(msg) {
+            const box = document.getElementById('statusBox');
+            box.classList.remove('hidden');
+            document.getElementById('status').innerText = msg;
+            if (msg.includes("✅") || msg.includes("🎉")) {
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            }
+        }
+
+        function showShareLink(id) {
+            const area = document.getElementById('shareArea');
+            area.classList.remove('hidden');
+            const url = window.location.origin + window.location.pathname + "?id=" + id;
+            document.getElementById('shareUrl').value = url;
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(document.getElementById('shareUrl').value);
+            alert("Kopyalandı!");
+        }
+    </script>
+</body>
+</html>
