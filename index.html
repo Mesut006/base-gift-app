@@ -105,24 +105,53 @@
         };
 
         document.getElementById('connectBtn').onclick = async () => {
-            if (!window.ethereum) return alert("MetaMask yüklü değil!");
-            try {
-                const provider = new ethers.BrowserProvider(window.ethereum);
-                const network = await provider.getNetwork();
-                if (Number(network.chainId) !== 84532) {
-                    alert("Lütfen MetaMask'ı Base Sepolia ağına geçirin!");
-                    return;
-                }
-                await provider.send("eth_requestAccounts", []);
-                signer = await provider.getSigner();
-                contract = new ethers.Contract(contractAddress, abi, signer);
-                document.getElementById('connectBtn').innerText = "Bağlı ✅";
-                showStatus("Cüzdan bağlandı.");
-                listMyGifts(); // Bağlanınca listeyi çek
-            } catch (err) {
-                showStatus("Bağlantı Hatası: " + err.message);
+    // 1. MOBİL KONTROLÜ: Eğer tarayıcıda cüzdan yoksa ve cihaz mobildeyse MetaMask'a yönlendir
+    if (!window.ethereum && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        const currentUrl = window.location.href.replace(/^https?:\/\//, '');
+        window.location.href = `https://metamask.app.link/dapp/${currentUrl}`;
+        return;
+    }
+
+    // 2. MASAÜSTÜ KONTROLÜ
+    if (!window.ethereum) return alert("MetaMask veya Web3 cüzdanı bulunamadı!");
+
+    try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        
+        // Ağ kontrolü ve otomatik ağ değiştirme isteği
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x14a34' }], // Base Sepolia 84532'nin hex hali
+            });
+        } catch (switchError) {
+            // Ağ cüzdanda ekli değilse eklemesini iste
+            if (switchError.code === 4902) {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: '0x14a34',
+                        chainName: 'Base Sepolia',
+                        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                        rpcUrls: ['https://sepolia.base.org'],
+                        blockExplorerUrls: ['https://sepolia.basescan.org']
+                    }]
+                });
             }
-        };
+        }
+
+        await provider.send("eth_requestAccounts", []);
+        signer = await provider.getSigner();
+        contract = new ethers.Contract(contractAddress, abi, signer);
+        
+        const addr = await signer.getAddress();
+        document.getElementById('connectBtn').innerText = addr.slice(0,6) + "..." + addr.slice(-4);
+        showStatus("Cüzdan bağlandı.");
+        listMyGifts(); 
+    } catch (err) {
+        showStatus("Hata: " + err.message);
+    }
+};
 
         async function createGift() {
             try {
