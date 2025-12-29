@@ -6,97 +6,59 @@
     <title>BaseGift | On-Chain Hediye</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@web3modal/ethers@5.1.5/dist/index.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@web3modal/ethers@5.1.5/dist/index.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    
+
     <style>
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: radial-gradient(circle at top right, #1e40af, #000); 
-            min-height: 100vh; 
-            color: white;
-            margin: 0;
-            overflow-x: hidden;
-        }
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .btn-primary { background: linear-gradient(45deg, #3b82f6, #2563eb); transition: all 0.3s ease; }
-        /* Görsel bozulmayı engellemek için Web3Modal katmanını sabitleyelim */
-        w3m-modal { position: relative; z-index: 9999; }
+        body { font-family: sans-serif; background: #0a0a0a; color: white; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 20px; }
+        input { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 10px; width: 100%; margin-bottom: 10px; }
+        button { cursor: pointer; transition: 0.3s; }
+        button:hover { opacity: 0.8; }
     </style>
 </head>
-<body class="p-4 md:p-12">
-    <div class="max-w-4xl mx-auto">
-        <div class="flex flex-col items-center mb-12 border-b border-white/10 pb-8">
-            <div class="w-full flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-black italic tracking-tighter uppercase">BASE<span class="text-blue-500">GIFT</span></h1>
-                <button id="connectBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full text-xs font-bold transition-all border border-blue-400/30">Cüzdanı Bağla</button>
-            </div>
-            
-            <p class="text-[10px] text-gray-500 tracking-[0.2em] uppercase text-center">Developed by <span class="text-blue-400 font-bold">@MesutGoktug</span></p>
+<body>
+
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+            <h1 style="font-weight: 800; font-style: italic;">BASEGIFT</h1>
+            <button id="connectBtn" style="background: #0052ff; border: none; color: white; padding: 10px 20px; border-radius: 50px; font-weight: bold;">Cüzdanı Bağla</button>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-8 mb-8">
-            <div class="glass p-8 rounded-3xl">
-                <h2 class="text-xl font-bold mb-4">Hediye Gönder 🎁</h2>
-                <div class="space-y-4">
-                    <input id="amount" type="number" step="0.01" placeholder="Miktar (ETH)" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
-                    <input id="createPass" type="password" placeholder="Gizli Şifre" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
-                    <button onclick="createGift()" class="w-full btn-primary py-4 rounded-xl font-bold">Paketi Mühürle</button>
-                </div>
-            </div>
-            <div class="glass p-8 rounded-3xl">
-                <h2 class="text-xl font-bold mb-4">Hediye Al 🔑</h2>
-                <div class="space-y-4">
-                    <input id="giftId" type="number" placeholder="Hediye ID" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
-                    <input id="claimPass" type="password" placeholder="Şifreyi Gir" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl outline-none focus:border-blue-500 text-white">
-                    <button onclick="claimGift()" class="w-full bg-white/10 border border-white/20 py-4 rounded-xl font-bold hover:bg-white/20 text-white">Parayı Çek</button>
-                </div>
-            </div>
+        <div class="card" style="margin-bottom: 20px;">
+            <h3>Hediye Gönder 🎁</h3>
+            <input id="amount" type="number" placeholder="Miktar (ETH)">
+            <input id="createPass" type="password" placeholder="Şifre">
+            <button onclick="createGift()" style="width: 100%; background: #22c55e; border: none; color: white; padding: 15px; border-radius: 10px; font-weight: bold;">Mühürle ve Gönder</button>
         </div>
 
-        <div class="glass p-6 rounded-3xl mb-8">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-bold">Oluşturduğum Hediyeler 📜</h2>
-                <button onclick="listMyGifts()" class="text-[10px] bg-blue-600/20 px-4 py-2 rounded-lg border border-blue-500/30 font-bold">YENİLE</button>
-            </div>
-            <div id="giftList" class="grid sm:grid-cols-2 gap-4">
-                <p class="text-gray-500 text-[10px] italic col-span-full text-center">Cüzdan bağlanınca veriler gelecek.</p>
-            </div>
+        <div class="card">
+            <h3>Hediye Al 🔑</h3>
+            <input id="giftId" type="number" placeholder="Hediye ID">
+            <input id="claimPass" type="password" placeholder="Şifreyi Gir">
+            <button onclick="claimGift()" style="width: 100%; background: #3b82f6; border: none; color: white; padding: 15px; border-radius: 10px; font-weight: bold;">Hediyeyi Çek</button>
         </div>
 
-        <div id="statusBox" class="mt-8 glass p-6 rounded-2xl hidden text-center">
-            <p id="status" class="text-blue-300 font-mono text-sm"></p>
-        </div>
+        <div id="status" style="margin-top: 20px; text-align: center; color: #60a5fa; font-size: 14px;"></div>
     </div>
 
     <script>
-        // --- 1. AYARLAR ---
         const contractAddress = "0x40528Fa18B169724789D756218cE0652018ada33";
-        const abi = [
-            {"inputs":[{"internalType":"bytes32","name":"_sifreHash","type":"bytes32"}],"name":"hediyeOlustur","outputs":[],"stateMutability":"payable","type":"function"},
-            {"inputs":[{"internalType":"uint256","name":"_id","type":"uint256"},{"internalType":"string","name":"_sifre","type":"string"}],"name":"hediyeAl","outputs":[],"stateMutability":"nonpayable","type":"function"},
-            {"inputs":[{"internalType":"address","name":"_olusturan","type":"address"}],"name":"kullaniciHediyeleri","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},
-            {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"hediyeler","outputs":[{"internalType":"address","name":"olusturan","type":"address"},{"internalType":"bytes32","name":"sifreHash","type":"bytes32"},{"internalType":"uint256","name":"miktar","type":"uint256"},{"internalType":"bool","name":"alindi","type":"bool"}],"stateMutability":"view","type":"function"},
-            {"inputs":[],"name":"hediyeSayaci","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
-        ];
+        const abi = [{"inputs":[{"internalType":"bytes32","name":"_sifreHash","type":"bytes32"}],"name":"hediyeOlustur","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_id","type":"uint256"},{"internalType":"string","name":"_sifre","type":"string"}],"name":"hediyeAl","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_olusturan","type":"address"}],"name":"kullaniciHediyeleri","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"hediyeler","outputs":[{"internalType":"address","name":"olusturan","type":"address"},{"internalType":"bytes32","name":"sifreHash","type":"bytes32"},{"internalType":"uint256","name":"miktar","type":"uint256"},{"internalType":"bool","name":"alindi","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"hediyeSayaci","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
 
-        // REOWN ID (Lütfen panelden aldığın ID'yi buraya yaz)
+        // BURAYI KENDI PROJECT ID'NLE DEGISTIR
         const projectId = 'f302bade5f99a4e406c852288174b049'; 
 
-        let signer, contract, modal, currentWeb3Lib;
+        let signer, contract, modal;
 
-        // --- 2. GÜVENLİ BAŞLATICI ---
-        function init() {
-            // Web3ModalEthers veya Web3Modal olarak yüklenebilir
-            currentWeb3Lib = window.Web3Modal || window.Web3ModalEthers;
-
-            if (!currentWeb3Lib) {
-                console.log("Kütüphane bekleniyor...");
+        // Kütüphane yüklenene kadar bekleyen ana fonksiyon
+        async function init() {
+            if (!window.Web3Modal) {
                 setTimeout(init, 500);
                 return;
             }
 
-            const { createWeb3Modal, defaultConfig } = currentWeb3Lib;
+            const { createWeb3Modal, defaultConfig } = window.Web3Modal;
             
             modal = createWeb3Modal({
                 ethersConfig: defaultConfig({ metadata: { name: 'BaseGift', url: window.location.origin } }),
@@ -111,91 +73,49 @@
                 themeMode: 'dark'
             });
 
-            // Buton Olayı
-            document.getElementById('connectBtn').onclick = () => {
+            document.getElementById('connectBtn').onclick = async () => {
                 const wp = modal.getWalletProvider();
-                wp ? setupEthers(wp) : modal.open();
+                if (wp) setup(wp); else modal.open();
             };
 
-            // Otomatik Bağlantı İzleme
             modal.subscribeProvider(({ provider: wp, isConnected }) => {
-                if (isConnected && wp) setupEthers(wp);
+                if (isConnected && wp) setup(wp);
             });
         }
 
-        async function setupEthers(wp) {
-            try {
-                const provider = new currentWeb3Lib.ethers.BrowserProvider(wp);
-                signer = await provider.getSigner();
-                contract = new currentWeb3Lib.ethers.Contract(contractAddress, abi, signer);
-                const addr = await signer.getAddress();
-                document.getElementById('connectBtn').innerText = addr.slice(0,6) + "..." + addr.slice(-4);
-                showStatus("Bağlandı ✅");
-                listMyGifts();
-            } catch (e) { console.error("Ethers Hatası:", e); }
+        async function setup(wp) {
+            const provider = new window.Web3Modal.ethers.BrowserProvider(wp);
+            signer = await provider.getSigner();
+            contract = new window.Web3Modal.ethers.Contract(contractAddress, abi, signer);
+            const addr = await signer.getAddress();
+            document.getElementById('connectBtn').innerText = addr.slice(0,6) + "..." + addr.slice(-4);
+            document.getElementById('status').innerText = "Cüzdan Bağlandı!";
         }
 
-        // --- 3. FONKSİYONLAR ---
         async function createGift() {
             try {
                 const amt = document.getElementById('amount').value;
                 const pass = document.getElementById('createPass').value;
-                if(!signer) return modal.open();
-                
-                const hash = currentWeb3Lib.ethers.keccak256(currentWeb3Lib.ethers.toUtf8Bytes(pass));
-                showStatus("Cüzdan onayı bekleniyor...");
-                const tx = await contract.hediyeOlustur(hash, { value: currentWeb3Lib.ethers.parseEther(amt) });
+                const hash = window.Web3Modal.ethers.keccak256(window.Web3Modal.ethers.toUtf8Bytes(pass));
+                const tx = await contract.hediyeOlustur(hash, { value: window.Web3Modal.ethers.parseEther(amt) });
+                document.getElementById('status').innerText = "İşlem gönderildi...";
                 await tx.wait();
-                showStatus("✅ Hediye başarıyla oluşturuldu!");
-                listMyGifts();
-            } catch (e) { showStatus("Hata: " + (e.reason || e.message)); }
+                confetti();
+                document.getElementById('status').innerText = "Hediye oluşturuldu!";
+            } catch (e) { alert(e.message); }
         }
 
         async function claimGift() {
             try {
                 const id = document.getElementById('giftId').value;
                 const pass = document.getElementById('claimPass').value;
-                if(!signer) return modal.open();
-                
-                showStatus("İşlem yapılıyor...");
                 const tx = await contract.hediyeAl(BigInt(id), pass);
                 await tx.wait();
-                showStatus("🎉 ETH başarıyla alındı!");
-                listMyGifts();
-            } catch (e) { showStatus("Hata: Şifre yanlış veya hediye alınmış."); }
+                confetti();
+                document.getElementById('status').innerText = "Hediye alındı!";
+            } catch (e) { alert("Hata: Şifre yanlış olabilir."); }
         }
 
-        async function listMyGifts() {
-            if(!contract || !signer) return;
-            const listDiv = document.getElementById('giftList');
-            listDiv.innerHTML = "<p class='col-span-full text-center text-xs animate-pulse'>Yükleniyor...</p>";
-            try {
-                const addr = await signer.getAddress();
-                const ids = await contract.kullaniciHediyeleri(addr);
-                let html = "";
-                for(let i = ids.length - 1; i >= 0; i--) {
-                    const gift = await contract.hediyeler(ids[i]);
-                    const eth = currentWeb3Lib.ethers.formatEther(gift.miktar);
-                    html += `
-                        <div class="bg-white/5 p-4 rounded-2xl border border-white/10 flex justify-between items-center">
-                            <div><p class="text-[10px] text-blue-400 font-mono">ID: #${ids[i]}</p><p class="font-bold text-sm">${eth} ETH</p></div>
-                            <div class="text-right">
-                                <span class="text-[10px] ${gift.alindi ? 'text-green-400' : 'text-yellow-400'}">${gift.alindi ? 'ALINDI' : 'BEKLIYOR'}</span>
-                            </div>
-                        </div>`;
-                }
-                listDiv.innerHTML = html || "<p class='col-span-full text-center text-xs'>Hediye bulunamadı.</p>";
-            } catch (e) { console.error(e); }
-        }
-
-        function showStatus(msg) {
-            const box = document.getElementById('statusBox');
-            box.classList.remove('hidden');
-            document.getElementById('status').innerText = msg;
-            if (msg.includes("✅") || msg.includes("🎉")) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        }
-
-        // Başlat
         window.onload = init;
     </script>
 </body>
